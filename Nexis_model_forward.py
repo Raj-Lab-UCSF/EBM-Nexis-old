@@ -89,6 +89,21 @@ class run_Nexis:
             y_[:,i] = np.dot(expm(A_*ti),np.squeeze(x0_)) 
         return y_
     
+    # Ashish added: Solve via analytic method for stage math
+    def stageNDM_analytical(self,L_,s_,x0_):  
+        # note, using stage argument now instead of time
+        # assumes stage is arbitrary in range, hence first normalize to range in [0,1]
+        # first do an eigendecomposition (might want to move it to global scope outside this function)
+        evals, evecs = np.linalg.eig(L_)
+        y_ = np.zeros([np.shape(L_)[0],len(s_)])
+        x0_tilde = np.dot(np.transpose(evecs), np.squeeze(x0_))
+        for k in range(np.shape(L_)[0]):
+            for i in list(range(len(s_))):
+                si = s_[i] / (np.max(s_)+s_[1])
+                y_tilde = ( si/((1-si)+np.finfo().eps) )**(alpha - beta*evals[k]) * x0_tilde[k]
+                y_[:,i] = y_[:,i] + y_tilde*evecs[k]
+        return y_
+
     # Solve via odeint with logistic term
     def logistic(self,t_,x0_,A_,Gamma_,k_):
 
@@ -97,6 +112,13 @@ class run_Nexis:
             dydt = np.dot(A, y) - np.dot(Gamma,np.square(y)) / k # ADD STAGE -> TIME CONVERSION HERE
             return dydt
 
+    # Ashish added: Solve via ode integration for stage math
+    def stageNDM_ode_func(y, s, A):  # note, using stage argument now instead of time
+        # assumes stage is normalized to range [0,1]
+        dydt = np.dot(A, y) / (s*(1-s)+np.finfo().eps)
+        return dydt
+        
+        
         # Initial condition
         y0 = x0_
 
